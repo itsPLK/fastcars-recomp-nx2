@@ -30,10 +30,11 @@ regions' title updates, other disc dumps) are refused.
 ```sh
 git clone https://github.com/itsPLK/fastcars-recomp-nx2
 cd fastcars-recomp-nx2
-python3 fastcars-nx2.py gui
+python3 fastcars.py
 ```
 
-The builder opens in your web browser.
+(Or download the repository as a zip from GitHub and run `python3 fastcars.py` in its folder: git isn't
+needed.) The builder opens in your web browser. It builds exactly the version in its folder.
 
 1. **Build.** Pick your Disc 1, Disc 2 and title update files and press Build. The first build copies
    and checks the game files, recompiles the game and builds `fastcars.nro`. Expect around an hour (longer on
@@ -55,21 +56,23 @@ That's it: start the game again and play. If you ever see missing objects later,
 The same steps without the browser:
 
 ```sh
-python3 fastcars-nx2.py build --disc1 "Disc 1.iso" --disc2 "Disc 2.iso" --tu tu00000009_00000000
-python3 fastcars-nx2.py install --ftp 192.168.1.20        # or --sd /path/to/the/sd/card
-python3 fastcars-nx2.py shaders --ftp 192.168.1.20
+python3 fastcars.py build --disc1 "Disc 1.iso" --disc2 "Disc 2.iso" --tu tu00000009_00000000
+python3 fastcars.py find                              # finds the console's FTP address
+python3 fastcars.py install --ftp 192.168.1.20        # or --sd /path/to/the/sd/card
+python3 fastcars.py shaders --ftp 192.168.1.20
 ```
 
-Everything the builder makes stays in the `fastcars-nx2-work` folder next to `fastcars-nx2.py`. On the SD
+Everything the builder makes stays in its work folder: your system's application data folder
+(`python3 fastcars.py status` shows where), or a `fastcars-nx2-work` folder next to `fastcars.py` if
+there is one. On the SD
 card, the game lives in `sdmc:/switch/fastcars/`: `fastcars.nro`, `args.txt` (settings), `data/` (game files,
 saves in `data/user`) and `logs/`.
 
 ## Updating
 
-The builder shows when a newer version of this repository is available. Press Build (your game files
-are kept; only the code is rebuilt), then Install. To build a specific version, put its commit hash in
-the Version field (or `build --commit HASH`). From the command line, `python3 fastcars-nx2.py update` tells
-you whether there is anything new.
+Get the new version (`git pull`, or `python3 fastcars.py update`, in your clone; or download the new
+zip), then Build and Install again. Your game files are kept in the work folder; only the code is
+rebuilt.
 
 Updating never touches your saves.
 
@@ -79,7 +82,7 @@ writes new ones; settings names have changed), and keep the rest: the game files
 saves in `data/` are reused.
 
 **Coming from the previous builder?** Clone this repository, then move the previous builder's work
-folder next to `fastcars-nx2.py` and rename it to `fastcars-nx2-work`. The game files extracted from
+folder next to `fastcars.py` and rename it to `fastcars-nx2-work`. The game files extracted from
 your discs are reused; the recompiled code and the build are redone by themselves.
 
 ## Playing
@@ -103,7 +106,7 @@ your discs are reused; the recompiled code and the build are redone by themselve
 ## Settings
 
 In the game's settings menu ([-] + [+]), which saves them to `sdmc:/switch/fastcars/args.txt`. The log level
-(for bug reports) isn't in the menu: set it with `python3 fastcars-nx2.py settings --ftp ... --log debug` or
+(for bug reports) isn't in the menu: set it with `python3 fastcars.py settings --ftp ... --log debug` or
 by editing `args.txt`.
 
 | Setting | Default | |

@@ -48,7 +48,7 @@ first, then the docs it points to.
 | `fastcars/src/native/` | Native renderer: `backend.cpp` (draws, targets, resolves, TAA, frame gen), `renderer.cpp` (frame queue, swap chain, presents, screenshots, flicker catcher), `capture.cpp` (draw capture on the game's D3D thread, fence copies), `menu.cpp` (the in-game settings menu, [-] + [+]) |
 | `fastcars/src/native/shaders/` | Our HLSL (blit, TAA/FSR 2/frame gen in `native_taa.hlsl`, FSR 1). The DXC commands are listed in `fastcars/CMakeLists.txt`. |
 | `switch2/game/` | The Switch 2 NRO build: `CMakeLists.txt`, `native_shaders.py`, and `args.txt` (the template for new installs). |
-| `switch2/builder/`, `fastcars-nx2.py` | The player's builder (Docker, about an hour from scratch): not for iterating. |
+| `fastcars.py`, `installer/`, `switch2/builder/` | The player's builder: `installer/core` (no UI: console FTP/SD, Docker, source sync, build, install, shaders, settings), `installer/cli.py`, the browser page; `switch2/builder/build.sh` runs in the builder container (about an hour from scratch): not for iterating. `fastcars-nx2.py` is the old name, a wrapper. |
 | `switch2/tools/` | Console log tools (`log_fps.py`, `sampler_*.py`), `mac_bench.sh`, the builder's disc extractor (`data_install/`) and shader constant rewrite (`ubo_constants.py`) |
 | `switch2/data/expected.txt` | Known-good sizes and SHA-256 of the player's game files (hashes only) |
 | `patches/` | Our changes to the SDK, glslang, plume and XenosRecomp, applied by the builder in the order of `switch2/builder/build.sh` |

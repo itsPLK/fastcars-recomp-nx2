@@ -1,7 +1,8 @@
 #!/bin/sh
 # fastcars-recomp-nx2: the whole build, inside the builder container (switch2/builder/Dockerfile).
-# Started by fastcars-nx2.py; everything happens in the mounted work folder:
-#   /work/src         this repository at the chosen commit (plus its upstream dependencies)
+# Started by fastcars.py (installer/core/build.py); everything happens in the mounted work folder:
+#   /work/src         a copy of the installer's own source (COMMIT: its commit), plus the upstream
+#                     checkouts this script adds
 #   /work/data        the game files from the player's discs (hash-checked)
 #   /work/codegen     the recompiled game code (C++ made from the player's default.xex)
 #   /work/build       build trees
@@ -127,7 +128,7 @@ game() {
 case "${1:-}" in
   build)
     shift
-    [ -d "$SRC/.git" ] || die "no source in $SRC"
+    [ -f "$SRC/switch2/builder/build.sh" ] || die "no source in $SRC"
     deps
     host_tools
     data_install "$@"

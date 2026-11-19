@@ -236,18 +236,41 @@ they quote the projects' own READMEs naming the game. The owner chose the middle
 
 ### 2.3 What a release is
 
-- **A tag on `main`** (`v1.0.0`) plus its `CHANGELOG.md` section, written without the game's name.
-- **No uploaded files.** GitHub's automatic source zip of the tag is the download. The installer
-  in it builds that exact source, so the version is reproducible without git.
-- **The version** comes from `git describe` in a checkout, or from a `VERSION` file that
-  `git archive` fills in (`export-subst` in `.gitattributes`), so source zips know their version too.
+- **A tag on `main`** (`v1.0.0`) plus a GitHub release with neutral release notes (also kept in
+  `CHANGELOG.md`), written without the game's name. **No uploaded files.**
+- **Pre-releases:** semantic-version suffixes (`v1.1.0-rc1`, `v1.1.0-beta.2`) with GitHub's
+  "pre-release" flag set. For trying a feature with a few testers before the full release.
+- **The version** is `v<VERSION>-<commit>`: the `VERSION` file (`1.0.0`, `1.1.0-rc1`) plus the commit,
+  from git in a checkout or from the `COMMIT` file in a source zip (`git archive` fills it in:
+  `export-subst` in `.gitattributes`).
+
+### 2.3a Choosing a version (decided 2026-11-19)
+
+The installer's first step (the CLI: `versions`, `--version vX`):
+
+- **The list:** the GitHub releases (public API, no login), newest first, with their notes as the
+  changelog. Pre-releases are hidden unless "Show test versions" (`--pre-releases`) is on; it turns
+  on by itself when the console already runs a pre-release. Semantic-version order: `v1.1.0-rc1`
+  sorts after `v1.0.x` and before `v1.1.0`.
+- **Preselected:** the newest full release. Also shown: what the console has (`install.json`) and
+  what this folder is.
+- **Switching, from a git clone:** fetch the tags, check the chosen tag out (detached), and restart
+  the installer from it, so the installer code always belongs to the version it builds. If the
+  folder has local changes, refuse with an explanation instead of touching them.
+- **Switching, from a zip (no git):** download the tag's source zip from GitHub into the app-data
+  folder (`.../fastcars/sources/<tag>/`) and restart from there.
+- **"This folder as it is":** builds the current checkout unchanged, for development on `main` or a
+  branch. Also the fallback when GitHub can't be reached.
+- **One work folder for all versions:** switching never re-extracts the discs; only the code is
+  rebuilt. Downgrades are allowed, with a warning.
 
 ### 2.4 Release checklist (`docs/RELEASING.md`)
 
 1. **Test on the console.** The owner plays the `main` build. It is merged only when tested
    (AGENTS.md).
 2. **Bump the version.** Write the CHANGELOG section (neutral wording).
-3. **Tag:** only when the owner says so.
+3. **Tag and release:** only when the owner says so. A GitHub release for the tag, notes from the
+   CHANGELOG section, no files; "pre-release" ticked for `-rcN` / `-beta.N` tags.
 4. **Test the release:** download the tag's source zip, then run the installer from it:
    - once in update mode against the console;
    - once against a fresh work folder.
