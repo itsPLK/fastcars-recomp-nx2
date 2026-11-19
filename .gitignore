@@ -1,0 +1,31 @@
+build/
+build-xr/
+thirdparty/
+logs/
+/derive/
+fastcars/generated/
+fastcars/assets/
+fastcars/out/
+*.log
+transfer/
+build-dll/
+dist/
+__pycache__/
+rexglue-sdk/
+.DS_Store
+
+# Switch 2 port: the player's own game files (ISOs, title update) live in gamefiles/
+gamefiles/*
+!gamefiles/README.md
+# Disc images and title updates anywhere in the tree
+*.iso
+*.ISO
+*.xex
+*.xexp
+*.rpf
+tu0000*
+
+# fastcars-nx2.py work folder: game files, generated code, builds (never commit)
+fastcars-nx2-work/
+# perf variant dev trees (docs/SWITCH2_PERF_PLAN.md)
+switch2/game/build-*/

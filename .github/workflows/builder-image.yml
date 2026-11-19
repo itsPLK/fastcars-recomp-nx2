@@ -1,0 +1,32 @@
+# Publishes the builder image (switch2/builder/Dockerfile: toolchains only, no game code) to
+# ghcr.io/<owner>/fastcars-recomp-nx2-builder, which fastcars-nx2.py pulls so players don't build it.
+name: builder image
+on:
+  push:
+    branches: [main]
+    paths: [switch2/builder/Dockerfile]
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: name
+        run: echo "image=ghcr.io/$(echo '${{ github.repository_owner }}' | tr 'A-Z' 'a-z')/fastcars-recomp-nx2-builder" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: switch2/builder
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.name.outputs.image }}:latest
+            ${{ steps.name.outputs.image }}:${{ github.sha }}

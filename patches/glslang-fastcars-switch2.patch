@@ -1,0 +1,26 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index ada2b8fb..ea445f2d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -139,7 +139,7 @@ if(WIN32)
+         include(ChooseMSVCCRT.cmake)
+     endif(MSVC)
+     add_definitions(-DGLSLANG_OSINCLUDE_WIN32)
+-elseif(UNIX)
++elseif(UNIX OR REX_SWITCH2)
+     add_definitions(-DGLSLANG_OSINCLUDE_UNIX)
+ else(WIN32)
+     message("unknown platform")
+diff --git a/glslang/CMakeLists.txt b/glslang/CMakeLists.txt
+index 1c7d22a2..34ab894e 100644
+--- a/glslang/CMakeLists.txt
++++ b/glslang/CMakeLists.txt
+@@ -33,7 +33,7 @@
+ 
+ if(WIN32)
+     add_subdirectory(OSDependent/Windows)
+-elseif(UNIX)
++elseif(UNIX OR REX_SWITCH2)  # Switch 2: newlib pthreads
+     add_subdirectory(OSDependent/Unix)
+ else(WIN32)
+     message("unknown platform")

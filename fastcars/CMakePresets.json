@@ -1,0 +1,74 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "mac-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "mac-arm64-base",
+      "hidden": true,
+      "inherits": "mac-base",
+      "cacheVariables": {
+        "CMAKE_C_FLAGS": "-march=armv8-a",
+        "CMAKE_CXX_FLAGS": "-march=armv8-a",
+        "CMAKE_OSX_ARCHITECTURES": "arm64"
+      }
+    },
+    {
+      "name": "mac-arm64-debug",
+      "displayName": "macOS ARM64 Debug",
+      "inherits": "mac-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "mac-arm64-release",
+      "displayName": "macOS ARM64 Release",
+      "inherits": "mac-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "mac-arm64-relwithdebinfo",
+      "displayName": "macOS ARM64 RelWithDebInfo",
+      "inherits": "mac-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "mac-arm64-debug",
+      "configurePreset": "mac-arm64-debug"
+    },
+    {
+      "name": "mac-arm64-release",
+      "configurePreset": "mac-arm64-release"
+    },
+    {
+      "name": "mac-arm64-relwithdebinfo",
+      "configurePreset": "mac-arm64-relwithdebinfo"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# fastcars-recomp-nx2: the game's settings, read at start from its folder (sdmc:/switch/fastcars/args.txt).
+# Paths are relative to that folder. Lines starting with # are ignored.
+--game_data_root=data/game
+--update_data_root=data/update
+--user_data_root=data/user
+--fastcars_native_spirv_dir=data/spirv
+--log_file=logs/fastcars.log --log_level=error --log_max_file_size_mb=16 --log_max_files=2
+--gpu_plugin=xenos --fastcars_native=on --gpu_skip_rendering=true --gpu_skip_rendering_lag_ms=16
+--fullscreen=true --mnk_mode=false
+--fastcars_native_record_thread=true
+
+# Options: remove the first # of a line to use it.
+# --fastcars_native_fps=true    # frames-per-second counter in the top-left corner
+# --log_level=info          # a detailed log in logs/fastcars.log (debug: even more)
+# --fastcars_fps_limit=30       # frame rate cap (default 60; 0 = none)
+# --switch2_clocks=keep     # leave the CPU clock alone (default: CPU at 1702 MHz)
+# --fastcars_native_render_scale=0.9   # 90% scene (1152x648), upscaled by FSR 2 (or FSR 1 with --fastcars_native_taa=false); default 1: full 1280x720
+# --fastcars_native_frame_gen=0        # frame generation off (default 1: interpolated, about 60 fps on screen)
+# --fastcars_native_display_1080p=true # 1920x1080 output, HUD at 1080p (sharper; about 45 fps on screen)
+# --fastcars_native_taa=false   # use the game's FXAA (and FSR 1 below 100%) instead of temporal AA / upscaling

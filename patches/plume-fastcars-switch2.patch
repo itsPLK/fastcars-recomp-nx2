@@ -1,0 +1,102 @@
+diff --git a/plume_render_interface_types.h b/plume_render_interface_types.h
+index 2ad1ad4..0630259 100644
+--- a/plume_render_interface_types.h
++++ b/plume_render_interface_types.h
+@@ -39,10 +39,17 @@
+ #include <SDL3/SDL_vulkan.h>
+ #endif
+ 
++#if defined(__SWITCH__)
++// Switch 2 (libounce): the process's default NWindow (VK_NN_vi_surface).
++struct NWindow;
++#endif
++
+ namespace plume {
+ #if defined(_WIN32)
+     // Native HWND handle to the target window.
+     typedef HWND RenderWindow;
++#elif defined(__SWITCH__)
++    typedef ::NWindow* RenderWindow;
+ #elif defined(__ANDROID__)
+     typedef ANativeWindow* RenderWindow;
+ #elif defined(PLUME_SDL_VULKAN_ENABLED)
+diff --git a/plume_vulkan.cpp b/plume_vulkan.cpp
+index fe25401..fa051c3 100644
+--- a/plume_vulkan.cpp
++++ b/plume_vulkan.cpp
+@@ -24,6 +24,13 @@
+ #include <climits>
+ #include <unordered_map>
+ 
++#if defined(__SWITCH__)
++#include <switch.h>
++// OunceVK's vkGetInstanceProcAddr under the name switch2/support's localized copy gives it (volk
++// owns the vk* names here).
++extern "C" PFN_vkVoidFunction rex_ounce_vkGetInstanceProcAddr(VkInstance instance, const char* name);
++#endif
++
+ #if DLSS_ENABLED
+ #   include "render/plume_dlss.h"
+ #endif
+@@ -78,6 +85,8 @@ namespace plume {
+ #   endif
+ #   if defined(_WIN32)
+         VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
++#   elif defined(__SWITCH__)
++        VK_NN_VI_SURFACE_EXTENSION_NAME,
+ #   elif defined(__ANDROID__)
+         VK_KHR_ANDROID_SURFACE_EXTENSION_NAME,
+ #   elif defined(__linux__)
+@@ -2174,6 +2183,19 @@ namespace plume {
+             fprintf(stderr, "vkCreateWin32SurfaceKHR failed with error code 0x%X.\n", res);
+             return;
+         }
++#   elif defined(__SWITCH__)
++        // One VI surface per process (the default NWindow): whoever creates it owns the screen.
++        assert(desc.renderWindow != nullptr);
++        VkViSurfaceCreateInfoNN surfaceCreateInfo = {};
++        surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_VI_SURFACE_CREATE_INFO_NN;
++        surfaceCreateInfo.window = desc.renderWindow;
++
++        VulkanInterface *renderInterface = commandQueue->device->renderInterface;
++        res = vkCreateViSurfaceNN(renderInterface->instance, &surfaceCreateInfo, nullptr, &surface);
++        if (res != VK_SUCCESS) {
++            fprintf(stderr, "vkCreateViSurfaceNN failed with error code 0x%X.\n", res);
++            return;
++        }
+ #   elif defined(PLUME_SDL2_VULKAN_ENABLED)
+         VulkanInterface *renderInterface = commandQueue->device->renderInterface;
+         SDL_bool sdlRes = SDL_Vulkan_CreateSurface(desc.renderWindow, renderInterface->instance, &surface);
+@@ -2554,6 +2576,8 @@ namespace plume {
+         GetClientRect(desc.renderWindow, &rect);
+         dstWidth = rect.right - rect.left;
+         dstHeight = rect.bottom - rect.top;
++#   elif defined(__SWITCH__)
++        nwindowGetDimensions(desc.renderWindow, &dstWidth, &dstHeight);
+ #   elif defined(PLUME_SDL_VULKAN_ENABLED)
+         SDL_GetWindowSizeInPixels(desc.renderWindow, (int *)(&dstWidth), (int *)(&dstHeight));
+ #   elif defined(__ANDROID__)
+@@ -4873,6 +4897,10 @@ namespace plume {
+                 }
+             }
+         }
++#elif defined(__SWITCH__)
++        // OunceVK is linked statically (switch2/support's localized copy): no loader to open.
++        volkInitializeCustom(reinterpret_cast<PFN_vkGetInstanceProcAddr>(&rex_ounce_vkGetInstanceProcAddr));
++        VkResult res = VK_SUCCESS;
+ #else
+         VkResult res = volkInitialize();
+ #endif
+diff --git a/plume_vulkan.h b/plume_vulkan.h
+index 0de1495..8315411 100644
+--- a/plume_vulkan.h
++++ b/plume_vulkan.h
+@@ -16,6 +16,8 @@
+ 
+ #if defined(_WIN32)
+ #define VK_USE_PLATFORM_WIN32_KHR
++#elif defined(__SWITCH__)
++#define VK_USE_PLATFORM_VI_NN
+ #elif defined(__ANDROID__)
+ #define VK_USE_PLATFORM_ANDROID_KHR
+ #elif defined(__linux__) && !defined(PLUME_SDL_VULKAN_ENABLED)

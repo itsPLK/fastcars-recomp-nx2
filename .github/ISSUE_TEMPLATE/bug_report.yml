@@ -1,0 +1,64 @@
+name: Bug report
+description: Something doesn't work, crashes or looks wrong.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please read before posting.** This project stays online by keeping a low profile:
+        - **Never name the game, its publisher or its studio.** Say "the game".
+        - **No screenshots or videos of the game.** Describe what you see in words. If a picture
+          is really needed, a maintainer will ask you to send it privately.
+        - **Never attach game files**, disc images, the built `fastcars.nro`, shaders or your work folder.
+
+        Posts that break these rules are edited or deleted.
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Rules
+      options:
+        - label: I didn't name the game, its publisher or its studio.
+          required: true
+        - label: I didn't attach screenshots, videos or any game files.
+          required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Where in the game, if it matters (describe the place in words).
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: The version shown in the homebrew menu (for example "v1.0.0-1a2b3c4d").
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Docked or handheld?
+      options:
+        - Handheld
+        - Docked
+        - Both
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings
+      description: The contents of `sdmc:/switch/fastcars/args.txt`, or the settings you changed in the menu.
+      render: text
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: |
+        Set Log to `debug` (in `args.txt`: `--log_level=debug`), reproduce the problem, quit, and
+        attach `sdmc:/switch/fastcars/logs/fastcars.log` here (drag the file in). It contains no game files.
+  - type: textarea
+    id: other
+    attributes:
+      label: Anything else
+      description: How often it happens, what you already tried, other homebrew running, etc.
