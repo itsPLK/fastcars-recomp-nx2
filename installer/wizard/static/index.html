@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fastcars installer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">fastcars <span id="ver" class="muted"></span></div>
+  <ol id="steps"></ol>
+</header>
+<main>
+
+<section data-step="version">
+  <h1>Choose a version</h1>
+  <p class="lead">The installer builds the game from your own discs and puts it on your console.
+  Pick the version to install. Your extracted game files are reused between versions.</p>
+  <div id="rel-status" class="muted">Checking for versions…</div>
+  <div id="rel-list" class="choices"></div>
+  <label class="check"><input type="checkbox" id="pre"> Show test versions (pre-releases)</label>
+  <details class="notes" id="rel-notes-box" hidden><summary>What's new</summary><pre id="rel-notes"></pre></details>
+  <div class="actions"><button id="version-next">Continue</button></div>
+</section>
+
+<section data-step="checks">
+  <h1>Before you start</h1>
+  <p class="lead">You need your own Xbox 360 discs of the game (Disc 1 and Disc 2), Title Update 27,
+  a Switch 2 with kaiHEN, and about 60 GB free on this computer.</p>
+  <div class="card">
+    <h2>Docker</h2>
+    <p id="docker-state"></p>
+    <p id="docker-help" class="muted" hidden></p>
+    <button class="secondary" id="docker-recheck">Check again</button>
+  </div>
+  <div class="card">
+    <h2>Work folder</h2>
+    <p class="muted">Everything the installer makes stays here: your extracted game files, the build, the
+    shaders. Keep it to yourself: it contains the publisher's copyrighted code.</p>
+    <p><code id="work"></code></p>
+    <p id="work-free" class="muted"></p>
+    <button class="secondary" id="work-change">Change…</button>
+  </div>
+  <div class="actions"><button class="back">Back</button><button id="checks-next">Continue</button></div>
+</section>
+
+<section data-step="files">
+  <h1>Your game files</h1>
+  <div id="files-done" class="card ok" hidden>
+    <p>Your game files are already extracted and checked in the work folder: the discs aren't needed again.</p>
+  </div>
+  <div id="files-form">
+    <p class="lead">Disc images (ISO) and extracted folders both work, for example a disc copied to the
+    console's hard drive: there the top folder is Disc 1 and its <code>Disc 2</code> folder is Disc 2.
+    The files are checked against known-good hashes while they're copied.</p>
+    <div class="field" data-name="disc1"><label>Disc 1 (Install)</label>
+      <div class="pathrow"><input id="disc1" placeholder="ISO file or folder"><button class="secondary pick" data-kind="file">File…</button><button class="secondary pick" data-kind="folder">Folder…</button></div></div>
+    <div class="field" data-name="disc2"><label>Disc 2 (Play)</label>
+      <div class="pathrow"><input id="disc2" placeholder="ISO file or folder"><button class="secondary pick" data-kind="file">File…</button><button class="secondary pick" data-kind="folder">Folder…</button></div></div>
+    <div class="field" data-name="tu"><label>Title Update 27 (the file <code>tu00000009_00000000</code>)</label>
+      <div class="pathrow"><input id="tu" placeholder="tu00000009_00000000"><button class="secondary pick" data-kind="file">File…</button></div>
+      <p class="muted small">On the console's hard drive it's under <code>Content/0000000000000000/545408A7/000B0000/</code>.</p></div>
+  </div>
+  <div class="actions"><button class="back">Back</button><button id="files-next">Continue</button></div>
+</section>
+
+<section data-step="console">
+  <h1>Your console</h1>
+  <div class="tabs"><button class="tab" data-mode="ftp">Over Wi-Fi (FTP)</button><button class="tab" data-mode="sd">SD card in this computer</button></div>
+  <div id="mode-ftp">
+    <p class="muted">Open OunceShell on the console. The game must be closed: FTP only answers while it isn't
+    running.</p>
+    <div class="pathrow"><input id="ftp" placeholder="192.168.1.20:1337"><button class="secondary" id="ftp-find">Search my network</button></div>
+    <div id="ftp-found" class="choices"></div>
+  </div>
+  <div id="mode-sd" hidden>
+    <div class="pathrow"><input id="sd" placeholder="The SD card's folder"><button class="secondary" id="sd-pick">Choose…</button><button class="secondary" id="sd-find">Find SD cards</button></div>
+    <div id="sd-found" class="choices"></div>
+  </div>
+  <div class="actions"><button class="back">Back</button><button id="console-next">Connect</button></div>
+  <p id="console-state"></p>
+</section>
+
+<section data-step="summary">
+  <h1>Ready</h1>
+  <div class="card"><p id="summary-what" class="big"></p><ul id="summary-list"></ul></div>
+  <label class="check" id="reset-box" hidden><input type="checkbox" id="reset-settings"> Reset the game's settings to the defaults</label>
+  <div class="actions"><button class="back">Back</button><button id="go">Start</button></div>
+</section>
+
+<section data-step="run">
+  <h1 id="run-title">Working…</h1>
+  <p id="run-stage" class="lead"></p>
+  <div class="bar"><div id="run-bar"></div></div>
+  <p class="muted small" id="run-hint">The first build takes about an hour (longer on a Mac). You can leave it running; the
+  computer is kept awake.</p>
+  <details><summary>Details</summary><pre id="run-log"></pre></details>
+  <p id="run-error" class="err" hidden></p>
+  <div class="actions"><button class="back" id="run-back" hidden>Back</button><button id="run-retry" hidden>Try again</button></div>
+</section>
+
+<section data-step="firststart">
+  <h1>First start</h1>
+  <p class="lead">The console records the shaders the game needs on its first start; then they're
+  translated here.</p>
+  <ol class="howto">
+    <li>Open the homebrew menu in <b>full-memory mode</b>: hold R while starting any game.</li>
+    <li>Start the game. Press <b>A</b> at the "No shaders yet" screen.</li>
+    <li>The screen stays black and you only hear the game. When it turns a little grey (a message),
+      press <b>B</b>.</li>
+    <li>Wait 3–5 minutes, until you hear the game itself past the menus.</li>
+    <li>Quit: press <b>HOME</b>, then <b>Close</b>. Then open OunceShell again (or put the SD card back
+      in this computer).</li>
+  </ol>
+  <div class="card"><p id="fs-state"></p><div class="bar"><div id="fs-bar"></div></div></div>
+  <div class="actions"><button class="back">Back</button><button class="secondary" id="fs-skip">Skip</button><button id="fs-fetch">Fetch shaders now</button></div>
+</section>
+
+<section data-step="done">
+  <h1>Done</h1>
+  <p class="lead" id="done-what"></p>
+  <ul>
+    <li>Start the game from the homebrew menu, in full-memory mode (hold R while starting any game).</li>
+    <li>Settings while you play: press <b>[-]</b> and <b>[+]</b> together.</li>
+    <li>Saves are in <code>switch/fastcars/data/user</code> on the SD card: copy that folder to keep a backup.</li>
+    <li>If objects are ever missing, run the installer again and choose "Fetch shaders" at the end.</li>
+  </ul>
+  <div class="actions"><button class="secondary" id="done-shaders">Fetch shaders again</button><button id="done-restart">Start over</button></div>
+</section>
+
+</main>
+<script src="app.js"></script>
+</body>
+</html>

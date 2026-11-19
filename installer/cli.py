@@ -14,8 +14,8 @@ import pathlib
 import subprocess
 import sys
 
-from .core import build, console, install, settings, shaders, source
-from .core.paths import REPO_ROOT, default_work_dir
+from .core import build, config, console, install, settings, shaders, source
+from .core.paths import REPO_ROOT
 from .core.report import InstallError, Reporter
 
 
@@ -97,14 +97,14 @@ def cmd_update(args, r):
 
 
 def cmd_gui(args, r):
-    from . import page
-    page.serve(args)
+    from .wizard import server
+    server.serve(args.work, args.port, not args.no_browser)
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="fastcars.py",
                                  description="Build the game from your own discs and install it on Switch 2.")
-    ap.add_argument("--work", default=str(default_work_dir()), help="work folder (default: %(default)s)")
+    ap.add_argument("--work", default=config.work_dir(), help="work folder (default: %(default)s)")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def target_opts(p):
@@ -149,7 +149,7 @@ def main(argv=None):
     p = sub.add_parser("update", help="update this folder to the newest version (git checkouts)")
     p.set_defaults(fn=cmd_update)
 
-    p = sub.add_parser("gui", help="the browser page")
+    p = sub.add_parser("gui", help="the step-by-step installer in your web browser (the default)")
     p.add_argument("--port", type=int, default=8742)
     p.add_argument("--no-browser", action="store_true")
     p.set_defaults(fn=cmd_gui)
@@ -162,6 +162,8 @@ def main(argv=None):
         print(f"\nError: {e}", file=sys.stderr, flush=True)
         return 1
     except KeyboardInterrupt:
+        from .core import docker
+        docker.stop_builds()
         print("\nStopped.", file=sys.stderr)
         return 130
     return 0

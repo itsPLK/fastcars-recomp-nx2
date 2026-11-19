@@ -62,6 +62,19 @@ def ensure_image(reporter):
     return tag
 
 
+def stop_builds():
+    """Stops the installer's running build containers (when the installer itself is stopped:
+    `docker run` keeps the container going otherwise)."""
+    try:
+        ids = subprocess.run(["docker", "ps", "-q", "--filter", f"label={LABEL}"], capture_output=True,
+                             text=True, timeout=20).stdout.split()
+        if ids:
+            subprocess.run(["docker", "stop", "-t", "5", *ids], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
 def run_in_builder(image, work, args, reporter, inputs=(), on_line=None):
     """Runs switch2/builder/build.sh ARGS in the builder container, the work folder at /work."""
     cmd = ["docker", "run", "--rm", "--platform", "linux/amd64", "--label", LABEL,

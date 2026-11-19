@@ -84,8 +84,18 @@ def build(work, reporter, disc1=None, disc2=None, tu=None):
         nro = nro_path(work)
         if not nro.is_file():
             raise InstallError("The build finished without producing the game. See the output above.")
+        # The version this NRO is (later shader runs re-sync the source and its COMMIT).
+        (work / "out" / "BUILT").write_text(_src_version(work) + "\n")
         reporter.progress(1.0)
         return nro
+
+
+def _src_version(work):
+    src = pathlib.Path(work) / "src"
+    try:
+        return f"v{(src / 'VERSION').read_text().strip()}-{(src / 'COMMIT').read_text().strip()}"
+    except OSError:
+        return source.version()
 
 
 def translate_shaders(work, reporter):

@@ -530,6 +530,16 @@ Sizes come from:
   (amd64 under Rosetta). It covered deps, host tools, codegen, game code and link. Per-stage times
   are still to measure (2.2).
 
+- **2026-11-19: installer milestone 1 landed** (`8ba3311`): `fastcars.py`, `installer/core`, CLI.
+- **2026-11-19: milestone 2 (wizard) on the `wizard` branch.** Tested on the Mac: the version list
+  and switching (fake releases served locally), checks, game files, console via a fake SD card,
+  summary (install vs. reinstall), build, copy with a free-space check, first start (SD), shader
+  fetch, done. Not yet tested: the native file dialogs by hand, and the first start over FTP with
+  the console. Version switching downloads the tag's zip into the app-data folder instead of
+  checking it out in the player's folder (never touches a clone).
+  - Fixed on the way: the SDK patch rewrote a generated header on every configure, so every player
+    build recompiled the whole SDK (319 steps, ~3 min); now a rebuild is ~12 steps, under a minute.
+
 ## Order of work (each step one or more commits on this branch)
 
 1. **Cleanup 1.0–1.1** (files). Verify the builds (Switch, builder, Mac). *The owner reviews the

@@ -34,24 +34,28 @@ python3 fastcars.py
 ```
 
 (Or download the repository as a zip from GitHub and run `python3 fastcars.py` in its folder: git isn't
-needed.) The builder opens in your web browser. It builds exactly the version in its folder.
+needed.) The installer opens in your web browser and takes you through it step by step:
 
-1. **Build.** Pick your Disc 1, Disc 2 and title update files and press Build. The first build copies
-   and checks the game files, recompiles the game and builds `fastcars.nro`. Expect around an hour (longer on
-   a Mac, where the build runs under emulation). Later builds reuse the game files and are much faster.
-2. **Install.** Choose FTP (the console's address, port 1337 and guest login by default) or the SD card's
-   folder on your computer, and press Install. The first install copies about 16 GB; after that, only
-   what changed.
-3. **First start.** On the console, open the homebrew menu in **full-memory mode** (hold R while starting
-   any game) and start the game. A screen says there are no shaders yet; press A. The screen then stays
-   **black** the whole time and you only hear the game: that's expected. On a first start the game
-   shows a message you can't read: when the screen turns a little grey, press **B**. Then wait 3-5
-   minutes, until you hear the game itself past the menus, and quit: press **HOME**, then **Close**.
-4. **Shaders.** Back in the builder, press Fetch shaders. The console saved every shader it used on the
-   first start; they are translated on your computer and copied back. Without this step, the game
-   shows nothing.
+1. **Version.** The newest release is preselected; tick "Show test versions" for pre-releases. If you
+   pick another version, the installer downloads it and restarts itself from it.
+2. **Checks.** Docker running, and a work folder with enough free space (about 60 GB the first time).
+3. **Game files.** Your Disc 1, Disc 2 (ISO images or extracted folders) and Title Update 27, picked
+   with your system's file dialogs. Only needed once: they're extracted and checked into the work
+   folder.
+4. **Console.** Over Wi-Fi ("Search my network" finds the console's FTP; OunceShell must be open and
+   the game closed) or the SD card in your computer. The installer shows what's installed there.
+5. **Build and copy.** The first build takes about an hour (longer on a Mac, where it runs under
+   emulation); later ones are much shorter. The first copy is about 16 GB, then only what changed.
+   Saves and settings are kept.
+6. **First start** (only once per console). Open the homebrew menu in **full-memory mode** (hold R while
+   starting any game) and start the game. A screen says there are no shaders yet: press A. The screen
+   then stays **black** and you only hear the game: that's expected. When it turns a little grey (a
+   message), press **B**. Wait 3-5 minutes, until you hear the game itself past the menus, then quit:
+   press **HOME**, then **Close**. Over Wi-Fi the installer notices and fetches the shaders by itself
+   once FTP is back; with an SD card, put it back in your computer and press "Fetch shaders now".
 
-That's it: start the game again and play. If you ever see missing objects later, press Fetch shaders again.
+That's it: start the game again and play. If you ever see missing objects later, run the installer
+again and fetch the shaders again at the end.
 
 The same steps without the browser:
 

@@ -49,7 +49,7 @@ index b3199ceb..3975d997 100644
 +    foreach(_n IN LISTS _rex_vma_names)
 +        string(APPEND _rex_vma_out "#define ${_n} rexsdk_${_n}\n")
 +    endforeach()
-+    file(WRITE "${_rex_vma_rename}" "${_rex_vma_out}")
++    file(CONFIGURE OUTPUT "${_rex_vma_rename}" CONTENT "${_rex_vma_out}" @ONLY)  # untouched when unchanged
 +    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include ${_rex_vma_rename}>")
 +elseif(WIN32)
      if(REX_TARGET_PROCESSOR MATCHES "AMD64|x86_64")

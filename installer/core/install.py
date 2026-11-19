@@ -65,6 +65,7 @@ def install(work, target, reporter, reset_settings=False):
             reporter.log("  saves (data/user) are already on the console: kept as they are")
         files = [p for local, _ in parts for p in _local_files(local)]
         total = sum(p.stat().st_size for p in files) + (out / NRO).stat().st_size
+        _check_space(target, parts, out, reporter)
         done = 0
         reporter.log("Game files (about 16 GB the first time; files already there are skipped):")
         for local, remote in parts:
@@ -86,10 +87,30 @@ def install(work, target, reporter, reset_settings=False):
             [n for n in target.listdir(f"{APP_DIR}/data/spirv") if n.endswith(".spv")]))
 
 
+def _check_space(target, parts, out, reporter):
+    """Fails early, with a clear message, when the SD card can't hold what is still missing."""
+    free = target.free_bytes()
+    if free is None:  # FTP doesn't report it
+        return
+    missing = (out / NRO).stat().st_size
+    for local, remote in parts:
+        for p in _local_files(local):
+            rel = f"{remote}/{p.relative_to(local).as_posix()}"
+            if target.size(rel) != p.stat().st_size:
+                missing += p.stat().st_size
+    if missing + (256 << 20) > free:
+        raise InstallError(f"Not enough free space on the SD card: {missing / 2**30:.1f} GB still to copy, "
+                           f"{free / 2**30:.1f} GB free.")
+    reporter.log(f"  {missing / 2**30:.1f} GB to copy, {free / 2**30:.1f} GB free on the SD card")
+
+
 def built_version(work):
-    """The version the work folder's source was built from (its COMMIT file), or this source's."""
-    c = pathlib.Path(work) / "src" / "COMMIT"
-    v = pathlib.Path(work) / "src" / "VERSION"
-    if c.is_file() and v.is_file():
+    """The version of the NRO in the work folder (out/BUILT, written when a build finishes), or
+    None without a build."""
+    f = pathlib.Path(work) / "out" / "BUILT"
+    if f.is_file():
+        return f.read_text().strip()
+    c, v = pathlib.Path(work) / "src" / "COMMIT", pathlib.Path(work) / "src" / "VERSION"
+    if c.is_file() and v.is_file():  # builds from before out/BUILT existed
         return f"v{v.read_text().strip()}-{c.read_text().strip()}"
-    return source.version()
+    return None
