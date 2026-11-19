@@ -14,7 +14,7 @@ import pathlib
 import subprocess
 import sys
 
-from .core import build, config, console, install, settings, shaders, source
+from .core import build, config, console, install, maintenance, settings, shaders, source, storage
 from .core.paths import REPO_ROOT
 from .core.report import InstallError, Reporter
 
@@ -63,6 +63,48 @@ def cmd_settings(args, r):
         print("SETTINGS " + json.dumps(current), flush=True)
     else:
         r.log("\n".join(f"{k}: {v}" for k, v in current.items()))
+
+
+def cmd_backup(args, r):
+    target = _target(args)
+    try:
+        maintenance.backup_saves(target, args.to, r)
+    finally:
+        target.close()
+
+
+def cmd_logs(args, r):
+    target = _target(args)
+    try:
+        maintenance.collect_logs(target, args.to, r)
+    finally:
+        target.close()
+
+
+def cmd_uninstall(args, r):
+    if not args.yes:
+        raise InstallError("Uninstalling removes the game from the console" +
+                           (", saves included" if args.delete_saves else " (saves are kept)") +
+                           ". Add --yes to go ahead.")
+    target = _target(args)
+    try:
+        maintenance.uninstall(target, r, args.delete_saves)
+    finally:
+        target.close()
+
+
+def cmd_storage(args, r):
+    u = storage.usage(args.work)
+    r.log(f"Work folder {u['work']}:")
+    for p in u["parts"]:
+        r.log(f"  {p['what']:42s} {p['size'] / 2**30:6.2f} GB   (deleting it: {p['cost']})")
+    for i in u["images"]:
+        r.log(f"  Docker image {i['tag']:29s} {i['size'] / 2**30:6.2f} GB   "
+              f"({'this version' if i['current'] else 'another version'})")
+
+
+def cmd_clean(args, r):
+    storage.clean(args.work, args.level, r, args.delete_shaders)
 
 
 def cmd_find(args, r):
@@ -138,6 +180,32 @@ def main(argv=None):
     p.add_argument("--taa", choices=["on", "off"], help="temporal anti-aliasing and upscaling")
     p.add_argument("--machine", action="store_true", help=argparse.SUPPRESS)
     p.set_defaults(fn=cmd_settings)
+
+    p = sub.add_parser("backup", help="copy your saves from the console to this computer")
+    target_opts(p)
+    p.add_argument("--to", default=".", help="folder to put the backup in (default: here)")
+    p.set_defaults(fn=cmd_backup)
+
+    p = sub.add_parser("logs", help="zip the console's logs for a bug report")
+    target_opts(p)
+    p.add_argument("--to", default=".", help="folder for the zip (default: here)")
+    p.set_defaults(fn=cmd_logs)
+
+    p = sub.add_parser("uninstall", help="remove the game from the console (saves kept)")
+    target_opts(p)
+    p.add_argument("--delete-saves", action="store_true", help="remove the saves too")
+    p.add_argument("--yes", action="store_true", help="really do it")
+    p.set_defaults(fn=cmd_uninstall)
+
+    p = sub.add_parser("storage", help="what the installer uses on this computer")
+    p.set_defaults(fn=cmd_storage)
+
+    p = sub.add_parser("clean", help="free space on this computer")
+    p.add_argument("--level", choices=storage.LEVELS, required=True,
+                   help="tidy: other versions' images; build: also the build files (the next build "
+                        "takes an hour); all: also the game files (the next build needs your discs)")
+    p.add_argument("--delete-shaders", action="store_true", help="with --level all: the saved shaders too")
+    p.set_defaults(fn=cmd_clean)
 
     p = sub.add_parser("find", help="find consoles with FTP on the local network")
     p.add_argument("--machine", action="store_true", help=argparse.SUPPRESS)

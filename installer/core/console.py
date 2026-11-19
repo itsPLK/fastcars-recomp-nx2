@@ -54,6 +54,10 @@ class SdTarget:
     def get(self, rel, local):
         shutil.copyfile(self._p(rel), local)
 
+    def get_into(self, rel, fileobj):
+        with open(self._p(rel), "rb") as f:
+            shutil.copyfileobj(f, fileobj)
+
     def read_text(self, rel):
         p = self._p(rel)
         return p.read_text(encoding="utf-8", errors="replace") if p.is_file() else None
@@ -72,6 +76,20 @@ class SdTarget:
 
     def free_bytes(self):
         return shutil.disk_usage(self.root).free
+
+    def entries(self, rel):
+        """[(name, is_dir, size)] in rel."""
+        p = self._p(rel)
+        if not p.is_dir():
+            return []
+        return sorted((x.name, x.is_dir(), 0 if x.is_dir() else x.stat().st_size) for x in p.iterdir())
+
+    def remove_tree(self, rel):
+        p = self._p(rel)
+        if p.is_dir():
+            shutil.rmtree(p)
+        elif p.exists():
+            p.unlink()
 
     def close(self):
         pass
@@ -175,6 +193,9 @@ class FtpTarget:
                 self.ftp.retrbinary(f"RETR /{rel}", f.write, blocksize=1 << 20)
         self._retry(go)
 
+    def get_into(self, rel, fileobj):
+        self._retry(lambda: self.ftp.retrbinary(f"RETR /{rel}", fileobj.write))
+
     def read_text(self, rel):
         chunks = []
         try:
@@ -202,6 +223,37 @@ class FtpTarget:
 
     def free_bytes(self):
         return None  # OunceShell does not report it
+
+    def entries(self, rel):
+        """[(name, is_dir, size)] in rel, from a LIST in the console's UNIX format."""
+        lines = []
+        try:
+            self._retry(lambda: self.ftp.retrlines(f"LIST /{rel}", lines.append))
+        except ftplib.error_perm:
+            return []
+        out = []
+        for line in lines:
+            parts = line.split(None, 8)
+            if len(parts) < 9 or parts[8] in (".", ".."):
+                continue
+            try:
+                size = int(parts[4])
+            except ValueError:
+                size = 0
+            out.append((parts[8], line.startswith("d"), size))
+        return sorted(out)
+
+    def remove_tree(self, rel):
+        for name, is_dir, _ in self.entries(rel):
+            child = f"{rel}/{name}"
+            if is_dir:
+                self.remove_tree(child)
+            else:
+                self._retry(lambda c=child: self.ftp.delete("/" + c))
+        try:
+            self._retry(lambda: self.ftp.rmd("/" + rel))
+        except ftplib.error_perm:
+            pass
 
     def close(self):
         try:

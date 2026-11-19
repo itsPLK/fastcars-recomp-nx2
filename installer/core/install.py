@@ -3,7 +3,7 @@ import datetime
 import json
 import pathlib
 
-from . import source
+from . import settings, source
 from .lock import work_lock
 from .paths import APP_DIR, NRO
 from .report import InstallError
@@ -51,7 +51,10 @@ def install(work, target, reporter, reset_settings=False):
     if not (out / NRO).is_file():
         raise InstallError("Nothing built yet: build first.")
     with work_lock(work):
+        from . import shaders  # (imports install)
+        shaders.ensure_current(work, target, reporter)
         reporter.stage(f"Copying to the console ({target.describe()})")
+        previous = read_installed(target) or {}
         parts = [(work / "data" / "game", f"{APP_DIR}/data/game"),
                  (work / "data" / "update", f"{APP_DIR}/data/update")]
         spirv = work / "out" / "spirv"
@@ -70,9 +73,16 @@ def install(work, target, reporter, reset_settings=False):
         reporter.log("Game files (about 16 GB the first time; files already there are skipped):")
         for local, remote in parts:
             done, _ = copy_tree(target, local, remote, reporter, done, total)
-        if reset_settings or not target.exists(f"{APP_DIR}/args.txt"):
+        template = (out / "args.txt").read_text(encoding="utf-8")
+        current = target.read_text(f"{APP_DIR}/args.txt")
+        if reset_settings or current is None:
             reporter.log("  args.txt (default settings)")
             target.put(out / "args.txt", f"{APP_DIR}/args.txt")
+        else:
+            migrated = settings.migrate(current, previous.get("args_template"), template)
+            if migrated != current:
+                reporter.log("  args.txt: settings you never changed follow this version's defaults")
+                target.write_text(f"{APP_DIR}/args.txt", migrated)
         reporter.log(f"  {NRO}")
         target.put(out / NRO, f"{APP_DIR}/{NRO}")
         reporter.progress(1.0)
@@ -80,6 +90,10 @@ def install(work, target, reporter, reset_settings=False):
             "version": built_version(work),
             "installed": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         }
+        state["args_template"] = template  # to tell the player's own settings from defaults later
+        translator = shaders.local_translator(work) if spirv.is_dir() else previous.get("translator")
+        if translator:
+            state["translator"] = translator
         target.write_text(STATE, json.dumps(state, indent=2) + "\n")
         # Not part of install.json: whether the console has translated shaders (else a first start
         # and a shader fetch are next).

@@ -21,7 +21,7 @@
   <div id="rel-list" class="choices"></div>
   <label class="check"><input type="checkbox" id="pre"> Show test versions (pre-releases)</label>
   <details class="notes" id="rel-notes-box" hidden><summary>What's new</summary><pre id="rel-notes"></pre></details>
-  <div class="actions"><button id="version-next">Continue</button></div>
+  <div class="actions"><button class="secondary" id="manage">Manage an installed game</button><button id="version-next">Continue</button></div>
 </section>
 
 <section data-step="checks">
@@ -97,7 +97,7 @@
   computer is kept awake.</p>
   <details><summary>Details</summary><pre id="run-log"></pre></details>
   <p id="run-error" class="err" hidden></p>
-  <div class="actions"><button class="back" id="run-back" hidden>Back</button><button id="run-retry" hidden>Try again</button></div>
+  <div class="actions"><button class="back" id="run-back" hidden>Back</button><button class="secondary" id="run-stop" hidden>Stop</button><button id="run-retry" hidden>Try again</button></div>
 </section>
 
 <section data-step="firststart">
@@ -126,7 +126,30 @@
     <li>Saves are in <code>switch/fastcars/data/user</code> on the SD card: copy that folder to keep a backup.</li>
     <li>If objects are ever missing, run the installer again and choose "Fetch shaders" at the end.</li>
   </ul>
+  <div class="card"><h2>Space on this computer</h2><div class="disk"></div></div>
   <div class="actions"><button class="secondary" id="done-shaders">Fetch shaders again</button><button id="done-restart">Start over</button></div>
+</section>
+
+<section data-step="maintenance">
+  <h1>Your install</h1>
+  <p class="lead" id="m-what"></p>
+  <p id="m-result" class="card ok" hidden></p>
+  <div class="card"><h2>Saves</h2>
+    <p class="muted">Copies your saves (without the discs' install data) to a folder on this computer.</p>
+    <button class="secondary" id="m-backup">Back up saves…</button></div>
+  <div class="card"><h2>Bug report</h2>
+    <p class="muted">Zips the game's log and settings, to attach to a bug report. For a detailed log, set the
+    log level to debug, play until the problem happens, then collect the logs.</p>
+    <div class="pathrow"><select id="m-log"><option>error</option><option>info</option><option>debug</option></select>
+      <button class="secondary" id="m-log-set">Set log level</button><button class="secondary" id="m-logs">Collect logs…</button></div></div>
+  <div class="card"><h2>Shaders</h2>
+    <p class="muted">If objects are missing, fetch the shaders the console saved since the last time.</p>
+    <button class="secondary" id="m-shaders">Fetch shaders again</button></div>
+  <div class="card"><h2>Remove from the console</h2>
+    <label class="check"><input type="checkbox" id="m-delete-saves"> Also delete the saves</label>
+    <button class="secondary" id="m-uninstall">Uninstall…</button></div>
+  <div class="card"><h2>Space on this computer</h2><div class="disk"></div></div>
+  <div class="actions"><button class="secondary" id="m-back">Back</button><button id="m-install">Install or update instead</button></div>
 </section>
 
 </main>

@@ -537,6 +537,12 @@ Sizes come from:
   `CHANGELOG.md`, `docs/RELEASING.md`, the full commit in source zips. Next: the first release
   `v1.0.0`. Milestone 3 (updates and upkeep) and the builder changes (2.2) follow in later releases.
 
+- **2026-11-19: `v1.0.0` released** (`9413800`). **Milestone 3 on the `upkeep` branch:** translator
+  fingerprint and re-translation on updates (tested on the console: 3,618 re-translated, identical),
+  settings migrations (template in install.json), maintenance (backup without the discs' install data,
+  logs zip, log level, uninstall), disk usage and cleanup levels, a Stop button. 23 unit tests. Not
+  yet tested by hand: the automatic first-start detection over Wi-Fi.
+
 ## Order of work (each step one or more commits on this branch)
 
 1. **Cleanup 1.0–1.1** (files). Verify the builds (Switch, builder, Mac). *The owner reviews the

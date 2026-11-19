@@ -61,6 +61,42 @@ def apply_setting(text, option, value):
     return "\n".join(out) + "\n"
 
 
+# Settings renamed or removed by a release, applied to args.txt on the next install, oldest first:
+# {"version": "v1.1.0", "rename": {"--old_option": "--new_option"}, "remove": ["--gone_option"]}
+MIGRATIONS = []
+
+
+def migrate(current, old_template, new_template, migrations=None):
+    """args.txt after an update. Renames and removals from MIGRATIONS apply always. With the
+    template the installer wrote last time (old_template), an option the player never changed
+    (still its old template value) takes the new template's value, options the new template drops
+    go when untouched, and options new in the template are added. The player's own changes and
+    additions stay."""
+    text = current
+    for m in (MIGRATIONS if migrations is None else migrations):
+        for old, new in (m.get("rename") or {}).items():
+            found = parse(text)
+            if old in found:
+                text = apply_setting(text, old, None)
+                if new not in found:
+                    text = apply_setting(text, new, found[old])
+        for opt in m.get("remove") or ():
+            text = apply_setting(text, opt, None)
+    if old_template is None or new_template is None:
+        return text
+    cur, old, new = parse(text), parse(old_template), parse(new_template)
+    for opt, value in new.items():
+        if opt in old:
+            if cur.get(opt) == old[opt] and value != old[opt]:
+                text = apply_setting(text, opt, value)
+        elif opt not in cur:
+            text = apply_setting(text, opt, value)
+    for opt, value in old.items():
+        if opt not in new and cur.get(opt) == value:
+            text = apply_setting(text, opt, None)
+    return text
+
+
 def value_for(key, value):
     option, mapping = SETTINGS[key]
     if key == "resolution":

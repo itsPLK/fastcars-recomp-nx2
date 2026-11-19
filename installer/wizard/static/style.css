@@ -59,3 +59,9 @@ details { margin: 10px 0; }
 code { font-size: 13px; overflow-wrap: anywhere; }
 ol.howto li { margin: 4px 0; }
 @media (max-width: 520px) { .pathrow { flex-wrap: wrap; } }
+select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card);
+         color: var(--fg); font: inherit; }
+.disk table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 10px; }
+.disk td { padding: 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.disk td.size { text-align: right; white-space: nowrap; padding-left: 12px; }
+.disk .cleanups { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

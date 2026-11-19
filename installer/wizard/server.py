@@ -15,7 +15,8 @@ import urllib.parse
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from ..core import build, config, console, install, releases, settings, shaders, source, system
+from ..core import (build, config, console, docker, install, maintenance, releases, settings, shaders,
+                    source, storage, system)
 from ..core.paths import APP_DIR, REPO_ROOT
 from ..core.report import InstallError
 from . import pickers
@@ -38,6 +39,7 @@ class Job:
         self.running = True
         self.error = None
         self.result = None
+        self.cancelled = False
         self.lock = threading.Lock()
 
     # Reporter interface
@@ -78,8 +80,10 @@ class Jobs:
         def run():
             try:
                 job.result = fn(job)
+                if job.cancelled:
+                    job.error = "Stopped."
             except InstallError as e:
-                job.error = str(e)
+                job.error = "Stopped." if job.cancelled else str(e)
             except OSError as e:
                 import errno
                 if e.errno == errno.ENOSPC:
@@ -190,6 +194,8 @@ class Handler(BaseHTTPRequestHandler):
                 except InstallError as e:
                     return self._json({"error": str(e), "releases": []})
                 return self._json({"releases": rel})
+            if url.path == "/api/storage":
+                return self._json(storage.usage(config.work_dir()))
             if url.path == "/api/job":
                 job = JOBS.current
                 since = int((q.get("since") or ["0"])[0])
@@ -230,6 +236,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(start_job(body))
             if url.path == "/api/job/stop":
                 STOP.set()
+                return self._json({"ok": True})
+            if url.path == "/api/job/cancel":  # the Stop button: also ends a running build
+                STOP.set()
+                if JOBS.current and JOBS.current.running:
+                    JOBS.current.cancelled = True
+                    docker.stop_builds()
                 return self._json({"ok": True})
             if url.path == "/api/settings":
                 target = _target(body)
@@ -319,6 +331,26 @@ def start_job(body):
                 return {"shaders": shaders.fetch_and_translate(work, target, job)}
             finally:
                 target.close()
+    elif action in ("backup", "logs"):
+        def fn(job):
+            target = _target(body)
+            try:
+                fn_ = maintenance.backup_saves if action == "backup" else maintenance.collect_logs
+                return {"path": str(fn_(target, body.get("dest") or str(pathlib.Path.home()), job))}
+            finally:
+                target.close()
+    elif action == "uninstall":
+        def fn(job):
+            target = _target(body)
+            try:
+                maintenance.uninstall(target, job, bool(body.get("delete_saves")))
+                return {"uninstalled": True}
+            finally:
+                target.close()
+    elif action == "clean":
+        def fn(job):
+            freed = storage.clean(work, body.get("level"), job, bool(body.get("delete_shaders")))
+            return {"freed": freed}
     elif action == "wait_first_start":
         def fn(job):
             return wait_first_start(job, body, STOP)

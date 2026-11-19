@@ -193,13 +193,18 @@ $("files-next").addEventListener("click", async () => {
     if (missing.length) { alert("Choose Disc 1, Disc 2 and the title update first."); return; }
     await api("/api/config", { disc1: $("disc1").value.trim(), disc2: $("disc2").value.trim(), tu: $("tu").value.trim() });
   }
+  showConsole();
+});
+
+async function showConsole() {
   const c = (await refresh()).config || {};
   setMode(c.mode || "ftp");
   $("ftp").value = c.ftp || "";
   $("sd").value = c.sd || "";
   $("console-state").textContent = "";
   show("console");
-});
+}
+$("manage").addEventListener("click", () => { S.manage = true; showConsole(); });
 
 // ---------------------------------------------------------------------------------------------
 // 4. Console
@@ -256,7 +261,7 @@ $("console-next").addEventListener("click", async () => {
   if (!r.ok) { $("console-state").innerHTML = `<span class="err">${r.error}</span>`; return; }
   S.cinfo = r;
   await api("/api/config", Object.assign({ last_installed: r.installed || null }, body));
-  showSummary();
+  if (S.manage) showMaintenance(); else showSummary();
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -312,10 +317,17 @@ async function runJob(body, title) {
   return poll((j) => {
     $("run-stage").textContent = j.stage || "";
     $("run-bar").style.width = Math.round(j.progress * 100) + "%";
+    $("run-stop").hidden = !(j.running && ["build", "shaders", "clean"].includes(j.action));
   });
 }
+$("run-stop").addEventListener("click", async () => {
+  $("run-stop").disabled = true;
+  await api("/api/job/cancel", {});
+  $("run-stop").disabled = false;
+});
 
 function fail(msg) {
+  $("run-stop").hidden = true;
   $("run-error").textContent = msg;
   $("run-error").hidden = false;
   $("run-retry").hidden = false;
@@ -403,6 +415,7 @@ function showDone() {
   $("done-what").textContent = `${vbase(S.st.version)} is on your console` +
     (S.shadersDone != null ? `, with ${S.shadersDone} shaders translated.` : ".");
   show("done");
+  renderDisk(document.querySelector('[data-step="done"] .disk'));
 }
 $("done-shaders").addEventListener("click", () => $("fs-fetch").click());
 $("done-restart").addEventListener("click", () => location.reload());
@@ -419,3 +432,92 @@ $("done-restart").addEventListener("click", () => location.reload());
   }
   loadReleases();
 })();
+
+// ---------------------------------------------------------------------------------------------
+// Maintenance
+
+async function showMaintenance(message) {
+  const c = S.cinfo;
+  $("m-what").textContent = c.installed ? `${vbase(c.installed)} is installed (${c.describe}).` :
+    c.has_app ? `A game folder is on the console (${c.describe}), without install records.` :
+    `Nothing is installed yet (${c.describe}).`;
+  $("m-log").value = (c.settings && c.settings.log) || "error";
+  $("m-result").hidden = !message;
+  $("m-result").textContent = message || "";
+  show("maintenance");
+  renderDisk(document.querySelector('[data-step="maintenance"] .disk'));
+}
+
+async function pickFolder(title) {
+  const r = await api("/api/pick", { kind: "folder", title, initial: (S.st.config || {}).last_dest || "" });
+  let path = r.path;
+  if (r.unavailable) path = prompt(title, (S.st.config || {}).last_dest || "");
+  if (path) await api("/api/config", { last_dest: path });
+  return path;
+}
+
+async function maintenanceJob(body, title, describe) {
+  const r = await runJob(Object.assign(body, consoleBody()), title);
+  if (!r) { S.retry = () => maintenanceJob(body, title, describe); return; }
+  const info = await api("/api/console", consoleBody());
+  if (info.ok) S.cinfo = info;
+  showMaintenance(describe(r));
+}
+
+$("m-backup").addEventListener("click", async () => {
+  const dest = await pickFolder("Where should the backup go?");
+  if (dest) maintenanceJob({ action: "backup", dest }, "Backing up saves", (r) => `Saves backed up to ${r.path}`);
+});
+$("m-logs").addEventListener("click", async () => {
+  const dest = await pickFolder("Where should the logs go?");
+  if (dest) maintenanceJob({ action: "logs", dest }, "Collecting logs", (r) => `Logs saved as ${r.path}`);
+});
+$("m-log-set").addEventListener("click", async () => {
+  const r = await api("/api/settings", Object.assign({ changes: { log: $("m-log").value } }, consoleBody()));
+  showMaintenance(r.error ? r.error : `Log level set to ${$("m-log").value}. It applies from the next start.`);
+});
+$("m-shaders").addEventListener("click", () =>
+  maintenanceJob({ action: "shaders" }, "Shaders", (r) => `${r.shaders} shaders fetched and translated.`));
+$("m-uninstall").addEventListener("click", () => {
+  const all = $("m-delete-saves").checked;
+  if (!confirm(all ? "Remove the game AND your saves from the console? The saves can't be recovered." :
+                     "Remove the game from the console? Your saves stay.")) return;
+  maintenanceJob({ action: "uninstall", delete_saves: all }, "Uninstalling",
+                 () => all ? "Removed, saves included." : "Removed. Your saves stay on the console.");
+});
+$("m-back").addEventListener("click", () => { S.manage = false; show("version"); });
+$("m-install").addEventListener("click", () => { S.manage = false; showSummary(); });
+
+// ---------------------------------------------------------------------------------------------
+// Disk space on this computer
+
+const CLEANUPS = [
+  ["tidy", "Tidy up", "Removes the build tools of other versions. Updates stay fast."],
+  ["build", "Delete build files", "Also the build files and this version's build tools: the next build takes about an hour again."],
+  ["all", "Delete everything", "Also your extracted game files: the next build needs your discs again."],
+];
+
+async function renderDisk(el) {
+  el.innerHTML = '<p class="muted">Measuring…</p>';
+  const u = await api("/api/storage");
+  if (u.error) { el.innerHTML = `<p class="err">${u.error}</p>`; return; }
+  const rows = u.parts.map((p) => [p.what, p.size, p.cost]).concat(
+    u.images.map((i) => [`Build tools (Docker image${i.current ? ", this version" : ", another version"})`, i.size, ""]));
+  const total = rows.reduce((a, r) => a + r[1], 0);
+  el.innerHTML = `<table>${rows.map((r) => `<tr><td>${r[0]}${r[2] ? `<div class="muted small">Deleting it: ${r[2]}</div>` : ""}</td>
+    <td class="size">${gb(r[1])}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="size"><b>${gb(total)}</b></td></tr></table>
+    <div class="cleanups">${CLEANUPS.map(([k, t]) => `<button class="secondary" data-level="${k}">${t}</button>`).join("")}
+    <label class="check small"><input type="checkbox" class="del-shaders"> with "Delete everything": also the saved shaders</label></div>
+    <p class="muted small">Folder: <code>${u.work}</code></p>`;
+  el.querySelectorAll("button[data-level]").forEach((b) => b.addEventListener("click", async () => {
+    const [, title, what] = CLEANUPS.find(([k]) => k === b.dataset.level);
+    if (!confirm(`${title}? ${what}`)) return;
+    const back = S.step;
+    const r = await runJob({ action: "clean", level: b.dataset.level,
+                             delete_shaders: el.querySelector(".del-shaders").checked }, title);
+    if (!r) return;
+    await refresh();
+    if (back === "maintenance") showMaintenance(`Freed about ${gb(r.freed)}.`);
+    else { show(back); renderDisk(el); }
+  }));
+}

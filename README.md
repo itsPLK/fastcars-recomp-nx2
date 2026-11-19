@@ -89,6 +89,15 @@ saves in `data/` are reused.
 folder next to `fastcars.py` and rename it to `fastcars-nx2-work`. The game files extracted from
 your discs are reused; the recompiled code and the build are redone by themselves.
 
+## Managing an install
+
+Run `python3 fastcars.py` and choose **Manage an installed game** to back up your saves, collect logs
+for a bug report, set the log level, fetch shaders again, or uninstall (your saves stay unless you
+ask). It also shows the space the installer uses on your computer and frees it: "Tidy up" keeps
+updates fast, "Delete build files" and "Delete everything" free more (the next build then takes
+longer, or needs your discs again). The same from the command line: `backup`, `logs`, `uninstall`,
+`storage`, `clean`.
+
 ## Playing
 
 - **Exit:** press HOME, then Close.
@@ -105,13 +114,15 @@ your discs are reused; the recompiled code and the build are redone by themselve
 - **For a sharper picture:** turn 1080p display on in the menu. FSR 2 then upscales straight to the
   screen's 1920x1080 and the HUD is drawn at full 1080p, at about 45 fps on screen with the same
   settings.
-- **Saves** are in `sdmc:/switch/fastcars/data/user`. Copy that folder to keep a backup.
+- **Saves** are in `sdmc:/switch/fastcars/data/user`. To back them up: run the installer, "Manage an
+  installed game", Back up saves.
 
 ## Settings
 
 In the game's settings menu ([-] + [+]), which saves them to `sdmc:/switch/fastcars/args.txt`. The log level
-(for bug reports) isn't in the menu: set it with `python3 fastcars.py settings --ftp ... --log debug` or
-by editing `args.txt`.
+(for bug reports) isn't in the menu: set it in the installer ("Manage an installed game"), with
+`python3 fastcars.py settings --ftp ... --log debug`, or by editing `args.txt`. Updates keep your
+settings; a setting you never changed follows the new version's default.
 
 | Setting | Default | |
 |---|---|---|
@@ -141,8 +152,9 @@ by editing `args.txt`.
   after an app exits. Restart the console.
 - **The build fails:** the builder shows the error; the full output is in the window (or the terminal).
   Check the free disk space and that Docker is running.
-- **Reporting a bug:** use the bug report form in Issues. Set Log to `debug`, reproduce it, and attach
-  `sdmc:/switch/fastcars/logs/fastcars.log` (it contains no game files). Please follow the rules there: don't
+- **Reporting a bug:** use the bug report form in Issues. In the installer's "Manage an installed game",
+  set the log level to `debug`, reproduce the problem, then "Collect logs" and attach the zip (it
+  contains no game files). Please follow the rules there: don't
   name the game or its publisher, and no screenshots or videos of the game (see
   [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
