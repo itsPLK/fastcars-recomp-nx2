@@ -264,17 +264,9 @@ The installer's first step (the CLI: `versions`, `--version vX`):
 - **One work folder for all versions:** switching never re-extracts the discs; only the code is
   rebuilt. Downgrades are allowed, with a warning.
 
-### 2.4 Release checklist (`docs/RELEASING.md`)
+### 2.4 Release checklist
 
-1. **Test on the console.** The owner plays the `main` build. It is merged only when tested
-   (AGENTS.md).
-2. **Bump the version.** Write the CHANGELOG section (neutral wording).
-3. **Tag and release:** only when the owner says so. A GitHub release for the tag, notes from the
-   CHANGELOG section, no files; "pre-release" ticked for `-rcN` / `-beta.N` tags.
-4. **Test the release:** download the tag's source zip, then run the installer from it:
-   - once in update mode against the console;
-   - once against a fresh work folder.
-5. **Push the tag.**
+Written down in `docs/RELEASING.md` (2026-11-19), with `CHANGELOG.md`.
 
 ### 2.5 CI for every push (new; no game files needed)
 
@@ -539,6 +531,11 @@ Sizes come from:
   checking it out in the player's folder (never touches a clone).
   - Fixed on the way: the SDK patch rewrote a generated header on every configure, so every player
     build recompiled the whole SDK (319 steps, ~3 min); now a rebuild is ~12 steps, under a minute.
+
+- **2026-11-19: milestone 2 landed** (`8434007`). Milestone 4's release mechanics on
+  `release-v1`: tests against a fake console FTP server (15 tests; a dropped upload is retried),
+  `CHANGELOG.md`, `docs/RELEASING.md`, the full commit in source zips. Next: the first release
+  `v1.0.0`. Milestone 3 (updates and upkeep) and the builder changes (2.2) follow in later releases.
 
 ## Order of work (each step one or more commits on this branch)
 

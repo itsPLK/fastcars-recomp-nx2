@@ -88,6 +88,11 @@ class FtpTarget:
         return f"FTP {self.host}:{self.port}"
 
     def _connect(self):
+        if self.ftp is not None:  # a dropped connection: let go of it before reconnecting
+            try:
+                self.ftp.close()
+            except Exception:
+                pass
         try:
             self.ftp = ftplib.FTP()
             self.ftp.connect(self.host, self.port, timeout=30)

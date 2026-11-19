@@ -9,7 +9,7 @@ if H=$(git -c safe.directory='*' -C "$SRC" rev-parse --short=8 HEAD 2>/dev/null)
   git -c safe.directory='*' -C "$SRC" diff --quiet HEAD -- 2>/dev/null || H="$H-dirty"
 else
   # No git: the installer's copy (or a source zip) records the commit in COMMIT.
-  H=$(head -n 1 "$SRC/COMMIT" 2>/dev/null | tr -d ' \r')
+  H=$(head -n 1 "$SRC/COMMIT" 2>/dev/null | tr -d ' \r' | sed 's/^\([0-9a-f]\{8\}\)[0-9a-f]*/\1/')
   case $H in ''|'$'*) H=unknown;; esac
 fi
 V="v${BASE:-0.0.0}-$H"

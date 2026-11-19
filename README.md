@@ -74,9 +74,9 @@ saves in `data/user`) and `logs/`.
 
 ## Updating
 
-Get the new version (`git pull`, or `python3 fastcars.py update`, in your clone; or download the new
-zip), then Build and Install again. Your game files are kept in the work folder; only the code is
-rebuilt.
+Run `python3 fastcars.py` and pick the newer version at the first step: the installer gets it by
+itself, rebuilds (your game files are kept in the work folder; only the code is rebuilt) and updates
+the console. What changed in each version: [`CHANGELOG.md`](CHANGELOG.md).
 
 Updating never touches your saves.
 
@@ -127,9 +127,6 @@ by editing `args.txt`.
 
 ## Known issues
 
-- Some rendering glitches: long stretched lines and smeared pavement textures in places (the snow in
-  the prologue especially), the sea drawn too high on beaches. These come from the shared renderer and
-  happen on the other ports of this recompilation as well.
 - Cutscenes sometimes freeze for a moment or play without speech.
 - Generated frames (frame generation) are made from motion vectors: fast edges can show slight
   artefacts, and the car's shadow can shimmer a little.

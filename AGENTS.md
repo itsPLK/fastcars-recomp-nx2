@@ -39,7 +39,9 @@ first, then the docs it points to.
 - **The owner's notes:** `docs/HANDOFF_SWITCH2_NEXT.md` (state, settings, profiling, open issues),
   `docs/UPSCALERS_AND_TAA.md` (TAA, FSR 1/2, frame generation, their diagnostics),
   `docs/SWITCH2_PERF_PLAN.md`, `docs/CLEANUP_AND_INSTALLER_PLAN.md`, and `docs/*_PLAN.md` on feature
-  branches.
+  branches. Releases: `docs/RELEASING.md` and `CHANGELOG.md`.
+- **Installer tests:** `python3 -m unittest discover -s installer/tests -t .` (no Docker or console
+  needed: a fake console FTP server stands in).
 
 ## Where things are
 
