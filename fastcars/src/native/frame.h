@@ -157,7 +157,11 @@ struct Command {
 inline std::atomic<uint64_t> g_arena_grows{0}, g_arena_grow_bytes{0};  // stats: reallocations, bytes moved
 // Largest capacity any arena reached: a new arena starts there instead of doubling up from 4 MB
 // (each growth copied tens of MB in the open world: a hitch whenever a new packet was made).
+// At most 16 MB: one frame's fence copies grew an arena to 128 MB in a race, every new arena then
+// took 128 MB at once, and the next doubling (256 MB in one piece) died of bad_alloc on Switch 2
+// with ~1 GB of the heap free in smaller pieces (2026-11-20).
 inline std::atomic<size_t> g_arena_peak{0};
+inline constexpr size_t kArenaSeedMax = size_t(16) << 20;
 
 class ByteArena {
  public:
@@ -168,7 +172,7 @@ class ByteArena {
   void Shrink(size_t n) { size_ -= std::min(n, size_); }
   uint8_t* Grow(size_t n) {
     if (size_ + n > cap_) {
-      size_t cap = std::max(size_ + n, cap_ ? cap_ * 2 : std::max(size_t(4) << 20, g_arena_peak.load()));
+      size_t cap = std::max(size_ + n, cap_ ? cap_ * 2 : std::max(size_t(4) << 20, std::min(g_arena_peak.load(), kArenaSeedMax)));
       auto buf = std::make_unique_for_overwrite<uint8_t[]>(cap);
       if (size_) std::memcpy(buf.get(), buf_.get(), size_);
       g_arena_grows++, g_arena_grow_bytes += size_;

@@ -117,6 +117,16 @@ REXCVAR_DEFINE_BOOL(fastcars_native_fence_wait_draw, false, "FASTCARS",
 REXCVAR_DEFINE_BOOL(fastcars_native_fence_copy, true, "FASTCARS",
                     "Copy a draw's vertex and index data when the GPU fence after it is reached before the "
                     "frame was recorded (the game may reuse that memory from then on)");
+// Switch 2: one frame's fence copies passed 63 MB in a race; the arena doubled to 128 MB, then asked
+// for 256 MB in one piece and the game died of bad_alloc (2026-11-20). Draws past the cap are not
+// copied (read at record time, as without fence copies: at worst a one-frame glitch).
+#if defined(__SWITCH__)
+#define FASTCARS_FENCE_COPY_MAX_MB_DEFAULT 64
+#else
+#define FASTCARS_FENCE_COPY_MAX_MB_DEFAULT 0
+#endif
+REXCVAR_DEFINE_INT32(fastcars_native_fence_copy_max_mb, FASTCARS_FENCE_COPY_MAX_MB_DEFAULT, "FASTCARS",
+                     "Most fence-copied draw data kept for one frame, in MB (Switch 2 default 64; 0: no limit)");
 REXCVAR_DEFINE_BOOL(fastcars_native_check_draw_data, false, "FASTCARS",
                     "Hash every draw's vertex and index data at capture and again at record time, and log how "
                     "many draws the game rewrote in between (diagnostic; costs ~40% of both threads)");
@@ -505,6 +515,7 @@ static constexpr uint32_t kDevFenceDone = 11024;  // -> where the GPU writes the
 static struct {
   uint64_t copies = 0, bytes = 0, waits = 0, wait_timeouts = 0;
   uint64_t live_copies = 0, live_bytes = 0, live_full = 0, live_spins = 0;
+  uint64_t over_cap = 0, over_cap_bytes = 0, largest_frame = 0;  // --fastcars_native_fence_copy_max_mb
   double wait_ms = 0;
 } g_copy_stats;
 
@@ -668,12 +679,25 @@ static void FenceReached(uint32_t value) {
       }
       ByteArena& arena = found->second;
       const size_t before = arena.size();
-      SnapshotDrawData(c.d, [&](const uint8_t* data, uint32_t size) {
+      const size_t max_bytes = size_t(std::max(0, REXCVAR_GET(fastcars_native_fence_copy_max_mb))) << 20;
+      bool over = false;
+      uint64_t wanted = 0;
+      SnapshotDrawData(c.d, [&](const uint8_t* data, uint32_t size) -> uint32_t {
+        wanted += size;
+        if (over || (max_bytes && arena.size() + size > max_bytes)) {
+          over = true;
+          return 0;
+        }
         uint32_t at = uint32_t(arena.size());
         std::memcpy(arena.Grow(size), data, size);
         return at;
       });
-      if (c.d.snap_vertices) {
+      if (over) {
+        g_copy_stats.over_cap++;
+        g_copy_stats.over_cap_bytes += wanted;
+        arena.Shrink(arena.size() - before);
+      } else if (c.d.snap_vertices) {
+        g_copy_stats.largest_frame = std::max<uint64_t>(g_copy_stats.largest_frame, arena.size());
         g_copy_stats.copies++;
         g_copy_stats.bytes += arena.size() - before;
         g_fence_copies[{p.frame, p.draw}] = std::move(c);
@@ -750,9 +774,11 @@ void FenceCopiesRecorded(uint64_t frame) {
     if (frame % 300 == 0) {
       auto& st = g_copy_stats;
       REXLOG_INFO("[native] fence copies per 300 frames: {} draws ({} KB), GPU waited for the renderer {} times "
-                  "({:.1f} ms, {} timeouts), {} queued; packet arenas grew {} times ({} MB moved)",
+                  "({:.1f} ms, {} timeouts), {} queued; packet arenas grew {} times ({} MB moved); largest frame "
+                  "{} MB, {} draws over the cap ({} MB not copied)",
                   st.copies, st.bytes / 1024, st.waits, st.wait_ms, st.wait_timeouts, g_pending_copies.size(),
-                  g_arena_grows.exchange(0), g_arena_grow_bytes.exchange(0) >> 20);
+                  g_arena_grows.exchange(0), g_arena_grow_bytes.exchange(0) >> 20, st.largest_frame >> 20,
+                  st.over_cap, st.over_cap_bytes >> 20);
       if (st.live_copies || st.live_full)
         REXLOG_INFO("[native] live copies per 300 frames: {} draws ({} KB), {} waits for a draw being read, "
                     "{} buffer full", st.live_copies, st.live_bytes / 1024, st.live_spins, st.live_full);

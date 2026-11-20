@@ -11,7 +11,9 @@
 #include <rex/cvar.h>
 #include <rex/logging.h>
 
-#include <malloc.h>
+extern "C" {
+#include <switch2/memory/heap.h>  // no extern "C" of its own
+}
 
 #include <algorithm>
 #include <chrono>
@@ -206,10 +208,10 @@ void ApplyClocks() {
       u64 mem_total = 0, mem_used = 0;
       svcGetInfo(&mem_total, InfoType_TotalMemorySize, CUR_PROCESS_HANDLE, 0);
       svcGetInfo(&mem_used, InfoType_UsedMemorySize, CUR_PROCESS_HANDLE, 0);
-      // The heap is committed whole at start; malloc's own counts show what is in use.
-      const struct mallinfo mi = mallinfo();
-      REXLOG_INFO("Switch 2 memory: process {} of {} MB; malloc in use {} MB of {} MB taken from the heap",
-                  mem_used >> 20, mem_total >> 20, size_t(mi.uordblks) >> 20, size_t(mi.arena) >> 20);
+      // The heap is committed whole at start. malloc is libounce's mimalloc (mallinfo reads 0): its
+      // free count is whole free 64 KB units, a lower bound.
+      REXLOG_INFO("Switch 2 memory: process {} of {} MB; heap free {} of {} MB",
+                  mem_used >> 20, mem_total >> 20, heapGetFreeSize() >> 20, heapGetTotalSize() >> 20);
       REXLOG_INFO("Switch 2 clocks: CPU {} (measured {}) GPU {} EMC {} MHz, SoC {:.1f} C, "
                   "PCB {:.1f} C{}{}",
                   hz[0] / 1000000, eff > 0 ? std::to_string(int(eff)) : std::string("-"),

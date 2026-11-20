@@ -133,6 +133,19 @@ REXCVAR_DEFINE_STRING(fastcars_native_skip_ps, "", "FASTCARS", "Diagnostic: drop
 #else
 #define FASTCARS_TEXTURE_BUDGET_DEFAULT 1024
 #endif
+// Switch 2: the warm-up's ~6,400 pipelines took 794 MB of the heap and ~5,100 were still unused after
+// 20 min; free heap fell to 774 MB and the game died of bad_alloc mid-mission in some runs (2026-11-20).
+#if defined(__SWITCH2__)
+#define FASTCARS_WARMUP_RELEASE_DEFAULT 1536
+#else
+#define FASTCARS_WARMUP_RELEASE_DEFAULT 0
+#endif
+REXCVAR_DEFINE_INT32(fastcars_native_warmup_release_mb, FASTCARS_WARMUP_RELEASE_DEFAULT, "FASTCARS",
+                     "Switch 2: below this much free heap (MB), release the warmed pipelines not used yet "
+                     "(Switch 2 default 1536; 0: keep them all session)");
+REXCVAR_DEFINE_BOOL(fastcars_native_pipeline_warmup, true, "FASTCARS",
+                    "Compile the pipelines listed in shader_cache/pipelines.bin at start (diagnostic switch: "
+                    "warmed pipelines a run never uses stay in memory)");
 REXCVAR_DEFINE_INT32(fastcars_native_texture_budget_mb, FASTCARS_TEXTURE_BUDGET_DEFAULT, "FASTCARS",
                      "Decoded texture cache budget: textures idle for 2 s are released above it (unified memory)");
 // iPhone: the vertex/index buffer cache had no limit and reached 18,000 buffers (140 MB of Metal
@@ -356,6 +369,24 @@ REXCVAR_DEFINE_BOOL(fastcars_native_write_watch_verify, false, "FASTCARS",
 REXCVAR_DEFINE_BOOL(fastcars_native_tile_penumbra_all, true, "FASTCARS",
                     "Deferred sun lighting: every 16x16 tile takes the per-pixel penumbra variant "
                     "(variant made by the shader compiler); false uses the game's classification (blocky)");
+
+#if defined(__SWITCH2__)
+extern "C" {
+#include <switch2/memory/heap.h>  // no extern "C" of its own
+}
+#endif
+
+namespace {
+// Switch 2: MB of the process heap in no allocation (a lower bound; -1 elsewhere). The guest arena,
+// the renderer, the driver and GPU memory all come from this one heap.
+[[maybe_unused]] long HeapFreeMB() {
+#if defined(__SWITCH2__)
+  return long(heapGetFreeSize() >> 20);
+#else
+  return -1;
+#endif
+}
+}  // namespace
 
 namespace plume {
 extern bool g_colorInputAttachments;  // plume-fastcars.patch
@@ -1379,10 +1410,18 @@ class PipelineWarmer {
     file_ = std::fopen(file.string().c_str(), valid == data.size() ? "ab" : "wb");
     if (file_ && valid != data.size() && valid) std::fwrite(data.data(), 1, valid, file_);
     total_ = uint32_t(queue_.size());
+    if (!REXCVAR_GET(fastcars_native_pipeline_warmup) && !queue_.empty()) {
+      REXLOG_INFO("[native] pipeline warm-up off: {} recorded pipelines not compiled", total_);
+      records_.clear();
+      queue_.clear();
+      total_ = 0;
+    }
     if (queue_.empty()) return;
     remaining_ = total_;
     start_ = std::chrono::steady_clock::now();
-    REXLOG_INFO("[native] pipeline warm-up: compiling {} pipelines from earlier runs", total_);
+    heap_before_mb_ = HeapFreeMB();
+    REXLOG_INFO("[native] pipeline warm-up: compiling {} pipelines from earlier runs (heap free {} MB)", total_,
+                heap_before_mb_);
     workers_ = 4;
     for (int i = 0; i < 4; i++) std::thread([this] { Worker(); }).detach();
   }
@@ -1404,6 +1443,20 @@ class PipelineWarmer {
   }
 
   bool Active() const { return remaining_.load(std::memory_order_acquire) != 0; }
+  // Warmed records not taken yet (each holds a compiled pipeline until taken or released).
+  uint32_t Held() const { return remaining_.load(std::memory_order_acquire); }
+
+  // Low memory: destroys every warmed pipeline not taken yet (none was ever bound, so no frame in
+  // flight uses one); a later draw that needs one compiles it as a new pipeline. Only after the
+  // warm-up finished. Returns how many were released.
+  uint32_t Release() {
+    if (workers_.load(std::memory_order_acquire) != 0) return 0;
+    std::lock_guard lock(mutex_);
+    const uint32_t n = uint32_t(records_.size());
+    records_.clear();  // known_ keeps the keys: they are in the file already
+    remaining_.store(0, std::memory_order_release);
+    return n;
+  }
 
   // The warmed pipeline for `key` if its description equals `bytes`. *busy: it is compiling right
   // now and did not finish within `budget_ms` (the caller skips the draw this frame, as for its own
@@ -1521,8 +1574,10 @@ class PipelineWarmer {
     if (--workers_ == 0) {
       std::lock_guard lock(shader_mutex_);
       shaders_.clear();  // pipelines keep what they need of their modules
-      REXLOG_INFO("[native] pipeline warm-up done: {} of {} compiled in {:.1f} s", compiled_, total_,
-                  std::chrono::duration<double>(std::chrono::steady_clock::now() - start_).count());
+      const long heap_after = HeapFreeMB();
+      REXLOG_INFO("[native] pipeline warm-up done: {} of {} compiled in {:.1f} s (heap free {} -> {} MB)", compiled_,
+                  total_, std::chrono::duration<double>(std::chrono::steady_clock::now() - start_).count(),
+                  heap_before_mb_, heap_after);
     }
   }
 
@@ -1542,6 +1597,7 @@ class PipelineWarmer {
   std::atomic<int> workers_{0};
   std::atomic<uint32_t> remaining_{0};  // records not yet taken
   uint32_t total_ = 0, compiled_ = 0;
+  long heap_before_mb_ = -1;
   std::chrono::steady_clock::time_point start_;
 
  public:
@@ -3783,6 +3839,13 @@ struct Backend::Impl {
   // GB) before that: on a unified-memory Mac with 8 GB the whole system swapped.
   void EvictTexturesOverBudget() {
     if (frame % 60) return;
+    if (const int release_mb = REXCVAR_GET(fastcars_native_warmup_release_mb); release_mb > 0 && pipeline_warmer.Held()) {
+      if (const long free_mb = HeapFreeMB(); free_mb >= 0 && free_mb < release_mb) {
+        if (const uint32_t released = pipeline_warmer.Release())
+          REXLOG_INFO("[native] low memory ({} MB heap free): released {} warmed pipelines not used yet, "
+                      "now {} MB free", free_mb, released, HeapFreeMB());
+      }
+    }
     // Low memory (iOS jetsam headroom): half the budgets, and anything idle for 30 frames may go.
     bool low_memory = false;
     if (low_memory && low_memory_logs++ < 20)
@@ -3830,9 +3893,10 @@ struct Backend::Impl {
       for (const auto& [key, t] : targets)
         if (t.texture) target_bytes += uint64_t(t.width) * t.height * std::max(1u, t.msaa) * 4;
       REXLOG_INFO("[native] caches: {} textures {:.0f} MB (budget {} MB), {} buffers {:.0f} MB; {} upload chunks "
-                  "({} MB), {} render targets (~{} MB at 4 B/px)",
+                  "({} MB), {} render targets (~{} MB at 4 B/px); {} pipelines, {} warmed not used; heap free {} MB",
                   textures.size(), total / 1048576.0, budget >> 20, buffers.size(), buffer_bytes / 1048576.0,
-                  upload_chunks, (upload_chunks * kUploadChunk) >> 20, targets.size(), target_bytes >> 20);
+                  upload_chunks, (upload_chunks * kUploadChunk) >> 20, targets.size(), target_bytes >> 20,
+                  pipelines.size(), pipeline_warmer.Held(), HeapFreeMB());
     }
     if (total <= budget) return;
     std::vector<std::pair<uint64_t, uint64_t>> idle;  // used_frame, key
