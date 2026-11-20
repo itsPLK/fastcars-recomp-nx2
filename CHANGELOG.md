@@ -3,6 +3,14 @@
 Each release is a tag on `main`; the installer (`python3 fastcars.py`) lists them and builds the
 one you choose from your own discs. Versions with a suffix (`-rc1`, `-beta.2`) are test versions.
 
+## v1.1.1
+
+- **Fixed a crash from running out of memory,** most often partway through the first mission's
+  race, about 15 minutes into a session. Memory now stays in check over long sessions too.
+
+Known issues: cutscenes sometimes freeze for a moment or play without speech. Frame generation can
+show slight artefacts on fast edges, and the car's shadow can shimmer a little.
+
 ## v1.1.0
 
 - **Manage an installed game** (in the installer): back up your saves, collect logs for a bug
