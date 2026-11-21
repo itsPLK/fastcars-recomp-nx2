@@ -24,6 +24,7 @@ deps() {
   stamp=$WORK/build/deps.stamp
   P=$SRC/patches
   want=$(cat "$P"/rexglue-sdk-fastcars-linux.patch "$P"/rexglue-sdk-fastcars-switch2.patch \
+             "$P"/rexglue-sdk-xma-drain.patch "$P"/ffmpeg-xma-drain.patch \
              "$P"/glslang-fastcars-switch2.patch "$P"/plume-fastcars.patch "$P"/plume-fastcars-switch2.patch \
              "$P"/xenosrecomp-fastcars.patch | sha256sum | cut -c1-16)
   [ -f "$stamp" ] && [ "$(cat "$stamp")" = "$want" ] && return 0
@@ -34,6 +35,8 @@ deps() {
   git -C "$SRC/rexglue-sdk" submodule update -q --init --recursive
   git -C "$SRC/rexglue-sdk" apply "$P/rexglue-sdk-fastcars-linux.patch"
   git -C "$SRC/rexglue-sdk" apply "$P/rexglue-sdk-fastcars-switch2.patch"
+  git -C "$SRC/rexglue-sdk" apply "$P/rexglue-sdk-xma-drain.patch"
+  git -C "$SRC/rexglue-sdk/thirdparty/FFmpeg" apply "$P/ffmpeg-xma-drain.patch"
   git -C "$SRC/rexglue-sdk/thirdparty/glslang" apply "$P/glslang-fastcars-switch2.patch"
   mkdir -p "$SRC/thirdparty"
   git clone -q https://github.com/renderbag/plume "$SRC/thirdparty/plume"
